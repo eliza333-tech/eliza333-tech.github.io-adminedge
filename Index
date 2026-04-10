@@ -1,1 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edge Terminal — Admin Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --black:#000000;--white:#ffffff;
+  --g100:#f5f5f5;--g200:#e0e0e0;--g400:#888888;--g600:#555555;--g800:#333333;
+  --g900:#1a1a1a;--g950:#0a0a0a;
+  --green:#00ff88;--green-dim:#00cc6a;--green-dark:#003322;
+  --red:#ff3344;--red-dim:#cc2233;
+  --surface:#0a0a0a;--surface2:#111111;--border:#1a1a1a;--border2:#2a2a2a;
+  --mono:'Space Mono','Courier New',monospace;
+}
+html,body{height:100%;overflow:hidden;}
+body{background:#000;color:#fff;font-family:var(--mono);font-size:12px;line-height:1.5;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.018) 2px,rgba(0,0,0,0.018) 4px);pointer-events:none;z-index:9999;}
 
+.nav{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:rgba(0,0,0,0.97);border-bottom:1px solid var(--border);position:fixed;top:0;left:0;right:0;z-index:100;}
+.nav-brand{font-size:12px;font-weight:700;letter-spacing:3px;color:#fff;white-space:nowrap;}
+.nav-brand span{color:var(--g600);font-weight:400;}
+.nav-center{display:flex;gap:0;}
+.nav-tab{padding:0 20px;height:48px;display:flex;align-items:center;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);cursor:pointer;border-bottom:2px solid transparent;border-right:1px solid var(--border);transition:all 0.15s;user-select:none;white-space:nowrap;}
+.nav-tab:first-child{border-left:1px solid var(--border);}
+.nav-tab:hover{color:#fff;}
+.nav-tab.active{color:#fff;border-bottom-color:transparent;border-left:2px solid #fff;padding-left:14px;}
+.nav-tab.create-tab.active{color:var(--green);border-left-color:var(--green);border-bottom-color:transparent;}
+.nav-right{display:flex;align-items:center;gap:16px;}
+.nav-stat{text-align:right;}
+.nav-stat-val{font-size:12px;font-weight:700;color:var(--green);}
+.nav-stat-label{font-size:8px;letter-spacing:1.5px;color:var(--g600);text-transform:uppercase;}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+.app{display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 48px);margin-top:48px;overflow:hidden;}
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.main{display:flex;flex-direction:column;overflow:hidden;}
+
+.sid-search{padding:12px;border-bottom:1px solid var(--border);}
+.sid-search input{width:100%;background:var(--border);border:1px solid var(--border2);color:#fff;font-family:var(--mono);font-size:10px;padding:7px 10px;outline:none;}
+.sid-search input::placeholder{color:var(--g600);}
+.sid-search input:focus{border-color:var(--g600);}
+.sid-colhdr{display:grid;grid-template-columns:1fr auto;padding:7px 12px;border-bottom:1px solid var(--border);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);background:var(--surface2);}
+.sid-list{flex:1;overflow-y:auto;}
+.sid-list::-webkit-scrollbar{width:3px;}
+.sid-list::-webkit-scrollbar-thumb{background:var(--border2);}
+.sid-user{padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;}
+.sid-user:hover{background:var(--border);}
+.sid-user.active{background:var(--border2);border-left:2px solid var(--green);padding-left:10px;}
+.sid-name{font-size:11px;font-weight:700;color:#fff;margin-bottom:1px;}
+.sid-id{font-size:9px;color:var(--g600);}
+.sid-row{display:flex;align-items:center;justify-content:space-between;margin-top:5px;}
+.dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.dot-green{background:var(--green);}
+.dot-gray{background:var(--g600);}
+.dot-red{background:var(--red);}
+.sid-status{display:flex;align-items:center;gap:5px;font-size:8px;letter-spacing:1px;text-transform:uppercase;}
+.sid-units{font-size:10px;font-weight:700;}
+
+#view-all{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.tbl-topbar{padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0;}
+.tbl-filters{display:flex;gap:8px;}
+.filter-btn{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 12px;background:transparent;color:var(--g600);border:1px solid var(--border2);cursor:pointer;transition:all 0.1s;}
+.filter-btn:hover{color:#fff;border-color:var(--g400);}
+.filter-btn.active{color:#fff;border-color:#fff;background:var(--border2);}
+.tbl-wrap{flex:1;overflow:auto;}
+.tbl-wrap::-webkit-scrollbar{height:3px;width:3px;}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border2);}
+table.dt{width:100%;border-collapse:collapse;table-layout:fixed;}
+table.dt thead{position:sticky;top:0;z-index:10;}
+table.dt th{background:var(--surface2);padding:8px 14px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);text-align:left;border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap;cursor:pointer;user-select:none;border-right:1px solid var(--border);}
+table.dt th:hover{color:#fff;}
+table.dt td{padding:0 14px;height:44px;font-size:10px;color:var(--g400);border-bottom:1px solid var(--border);vertical-align:middle;border-right:1px solid var(--border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+table.dt tr:hover td{background:rgba(255,255,255,0.018);cursor:pointer;}
+table.dt td.nm{color:#fff;font-weight:700;font-size:11px;}
+table.dt td.grn{color:var(--green);font-weight:700;}
+table.dt td.rd{color:var(--red);font-weight:700;}
+table.dt td.mt{color:var(--g600);}
+.pill{display:inline-block;font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border:1px solid;}
+.pill.active{color:var(--green);border-color:rgba(0,255,136,0.3);}
+.pill.inactive{color:var(--red);border-color:rgba(255,51,68,0.3);}
+.pill.signed{color:var(--green);border-color:rgba(0,255,136,0.2);}
+.pill.pending{color:var(--red);border-color:rgba(255,51,68,0.2);}
+.tbl-footer{padding:10px 20px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(6,1fr);background:var(--surface);flex-shrink:0;}
+.sum-cell{padding:8px 16px;border-right:1px solid var(--border);}
+.sum-cell:first-child{padding-left:0;}
+.sum-cell:last-child{border-right:none;}
+.sum-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:3px;}
+.sum-val{font-size:14px;font-weight:700;color:#fff;}
+.sum-val.grn{color:var(--green);}
+
+#view-user{flex:1;overflow-y:auto;display:none;flex-direction:column;}
+#view-user::-webkit-scrollbar{width:3px;}
+#view-user::-webkit-scrollbar-thumb{background:var(--border2);}
+.detail-topbar{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:10;}
+.crumb{font-size:8px;letter-spacing:1.5px;color:var(--g600);text-transform:uppercase;cursor:pointer;margin-bottom:2px;}
+.crumb:hover{color:#fff;}
+.detail-name{font-size:15px;font-weight:700;color:#fff;}
+.badges{display:flex;gap:8px;}
+.dbadge{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid;}
+.dbadge.active{color:var(--green);border-color:rgba(0,255,136,0.3);}
+.dbadge.inactive{color:var(--red);border-color:rgba(255,51,68,0.3);}
+.dbadge.neutral{color:var(--g400);border-color:var(--border2);}
+
+.metrics-strip{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}
+.mc{padding:16px 18px;border-right:1px solid var(--border);}
+.mc:last-child{border-right:none;}
+.mc-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:6px;}
+.mc-val{font-size:22px;font-weight:700;line-height:1;color:#fff;}
+.mc-val.grn{color:var(--green);}
+.mc-sub{font-size:9px;color:var(--g600);margin-top:4px;}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);}
+.panel{border-right:1px solid var(--border);}
+.panel:last-child{border-right:none;}
+.panel-hdr{padding:8px 18px;background:var(--surface2);border-bottom:1px solid var(--border);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);}
+.ir{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--border);align-items:center;min-height:34px;}
+.ir:last-child{border-bottom:none;}
+.ik{padding:8px 18px;font-size:9px;color:var(--g600);}
+.iv{padding:8px 18px 8px 0;font-size:10px;color:#fff;font-weight:700;}
+.iv.grn{color:var(--green);}
+.iv.gray{color:var(--g400);font-weight:400;}
+.iv.rd{color:var(--red);}
+
+.tl-wrap{padding:16px 18px;}
+.tl-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--g600);margin-bottom:6px;}
+.tl-bar{width:100%;height:5px;background:var(--border2);}
+.tl-fill{height:100%;background:var(--green);transition:width 0.4s;}
+.tl-meta{display:flex;justify-content:space-between;font-size:9px;color:var(--g600);margin-top:5px;}
+.tl-events{margin-top:16px;border-top:1px solid var(--border);padding-top:12px;}
+.tl-event{display:flex;align-items:flex-start;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);}
+.tl-event:last-child{border-bottom:none;}
+.tl-evt-txt{flex:1;font-size:9px;color:var(--g400);line-height:1.4;}
+.tl-evt-date{font-size:9px;color:var(--g600);}
+
+.pay-section{border-bottom:1px solid var(--border);}
+.pay-hdr{padding:8px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.pay-hdr-txt{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);}
+.pay-hdr-total{font-size:10px;font-weight:700;color:var(--green);}
+table.pay-table{width:100%;border-collapse:collapse;}
+table.pay-table th{padding:7px 18px;font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);text-align:left;background:var(--surface);border-bottom:1px solid var(--border);font-weight:400;white-space:nowrap;border-right:1px solid var(--border);}
+table.pay-table th:last-child{border-right:none;}
+table.pay-table td{padding:0 18px;height:38px;font-size:10px;color:var(--g400);border-bottom:1px solid var(--border);vertical-align:middle;border-right:1px solid var(--border);}
+table.pay-table td:last-child{border-right:none;}
+table.pay-table tr:last-child td{border-bottom:none;}
+.pay-amt{color:#fff;font-weight:700;}
+.ps-paid{color:var(--green);font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(0,255,136,0.3);padding:2px 7px;}
+.ps-pending{color:var(--g600);font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid var(--border2);padding:2px 7px;}
+.ps-failed{color:var(--red);font-size:8px;letter-spacing:1px;text-transform:uppercase;border:1px solid rgba(255,51,68,0.3);padding:2px 7px;}
+
+.three-col{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--border);}
+.sms{padding:14px 18px;border-right:1px solid var(--border);}
+.sms:last-child{border-right:none;}
+.sms-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:5px;}
+.sms-val{font-size:18px;font-weight:700;color:#fff;}
+.sms-val.grn{color:var(--green);}
+
+.notes-section{border-bottom:1px solid var(--border);}
+.notes-body{padding:14px 18px;font-size:10px;color:var(--g400);line-height:1.8;}
+
+#view-create{flex:1;overflow-y:auto;display:none;}
+.create-wrap{padding:40px;max-width:660px;}
+.create-eyebrow{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);margin-bottom:4px;}
+.create-heading{font-size:22px;font-weight:700;color:#fff;margin-bottom:32px;}
+.create-section-title{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+.fg{display:flex;flex-direction:column;gap:6px;}
+.form-label{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);}
+.form-input{background:var(--border);border:1px solid var(--border2);color:#fff;font-family:var(--mono);font-size:11px;padding:9px 13px;outline:none;width:100%;}
+.form-input::placeholder{color:var(--g600);}
+.form-input:focus{border-color:var(--g400);}
+.form-select{background:var(--border);border:1px solid var(--border2);color:#fff;font-family:var(--mono);font-size:11px;padding:9px 13px;outline:none;appearance:none;width:100%;}
+.create-btn{background:var(--green);color:#000;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:11px 28px;border:none;cursor:pointer;transition:background 0.1s;}
+.create-btn:hover{background:var(--green-dim);}
+.create-btn:active{transform:scale(0.98);}
+.create-hint{font-size:9px;color:var(--g600);margin-top:12px;line-height:1.7;}
+.toast-bar{display:none;margin-top:16px;padding:12px 16px;border:1px solid rgba(0,255,136,0.3);background:rgba(0,255,136,0.04);font-size:10px;color:var(--green);letter-spacing:1px;}
+
+#view-empty{flex:1;display:none;align-items:center;justify-content:center;flex-direction:column;gap:8px;}
+#view-empty.show{display:flex;}
+.empty-mark{font-size:48px;font-weight:700;color:var(--border2);letter-spacing:-2px;}
+.empty-txt{font-size:9px;letter-spacing:2px;color:var(--g600);text-transform:uppercase;}
+
+.cw-name{width:155px;}.cw-status{width:82px;}.cw-plan{width:100px;}
+.cw-joined{width:105px;}.cw-subend{width:108px;}.cw-last{width:138px;}
+.cw-paid{width:92px;}.cw-units{width:88px;}.cw-logged{width:85px;}
+.cw-wr{width:70px;}.cw-sport{width:68px;}.cw-contract{width:95px;}
+.cw-email{width:195px;}.cw-id{width:90px;}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">EDGE <span>TERMINAL</span><span style="color:var(--g600);font-weight:400;font-size:10px;letter-spacing:2px;margin-left:12px;">// ADMIN</span></div>
+  <div class="nav-center" style="flex:1;padding:0 24px;">
+    <input type="text" id="search-input" placeholder="> search users..." oninput="renderSidebar()" style="width:100%;max-width:340px;background:var(--border);border:1px solid var(--border2);color:#fff;font-family:var(--mono);font-size:10px;padding:7px 12px;outline:none;letter-spacing:0.5px;">
+  </div>
+  <div class="nav-right">
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="nav-active">—</div>
+      <div class="nav-stat-label">Active Subs</div>
+    </div>
+    <div class="nav-stat">
+      <div class="nav-stat-val" id="nav-mrr">—</div>
+      <div class="nav-stat-label">MRR</div>
+    </div>
+    <div class="nav-dot"></div>
+    <div style="font-size:8px;letter-spacing:1.5px;color:var(--green);text-transform:uppercase;">LIVE</div>
+  </div>
+</nav>
+
+<div class="app">
+  <div class="sidebar">
+    <div style="display:flex;flex-direction:column;">
+      <div class="nav-tab active" id="tab-all" onclick="switchView('all')" style="height:44px;border-right:none;border-left:none;border-bottom:1px solid var(--border);padding:0 16px;width:100%;justify-content:flex-start;">ALL USERS</div>
+      <div class="nav-tab create-tab" id="tab-create" onclick="switchView('create')" style="height:44px;border-right:none;border-left:none;border-bottom:1px solid var(--border);padding:0 16px;width:100%;justify-content:flex-start;">+ CREATE USER</div>
+      <div class="nav-tab" id="tab-ambassador" onclick="switchView('ambassador')" style="height:44px;border-right:none;border-left:none;border-bottom:1px solid var(--border);padding:0 16px;width:100%;justify-content:flex-start;">AMBASSADOR</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ALL VIEW -->
+    <div id="view-all" style="display:flex;">
+      <div class="tbl-topbar">
+        <div>
+          <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);">// OVERVIEW TABLE · ALL USERS</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px;">User Database</div>
+        </div>
+        <div class="tbl-filters">
+          <button class="filter-btn active" onclick="setFilter('all',this)">ALL</button>
+          <button class="filter-btn" onclick="setFilter('active',this)">ACTIVE</button>
+          <button class="filter-btn" onclick="setFilter('inactive',this)">INACTIVE</button>
+          <button class="filter-btn" onclick="setFilter('pending',this)">PENDING CONTRACT</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table class="dt">
+          <thead><tr>
+            <th class="cw-name" onclick="sortBy('name')">NAME <span id="arr-name">▼</span></th>
+            <th class="cw-status" onclick="sortBy('active')">STATUS <span id="arr-active"></span></th>
+            <th class="cw-plan" onclick="sortBy('planShort')">PLAN <span id="arr-planShort"></span></th>
+            <th class="cw-joined" onclick="sortBy('joinedTs')">JOINED <span id="arr-joinedTs"></span></th>
+            <th class="cw-subend" onclick="sortBy('subEndTs')">SUB ENDS <span id="arr-subEndTs"></span></th>
+            <th class="cw-last" onclick="sortBy('lastSignTs')">LAST SIGN IN <span id="arr-lastSignTs"></span></th>
+            <th class="cw-paid" onclick="sortBy('paidNum')">TOTAL PAID <span id="arr-paidNum"></span></th>
+            <th class="cw-units" onclick="sortBy('unitsNum')">UNITS UP <span id="arr-unitsNum"></span></th>
+            <th class="cw-logged" onclick="sortBy('loggedNum')">UNITS LOG <span id="arr-loggedNum"></span></th>
+            <th class="cw-wr" onclick="sortBy('winrateNum')">WIN % <span id="arr-winrateNum"></span></th>
+            <th class="cw-sport" onclick="sortBy('sport')">SPORT <span id="arr-sport"></span></th>
+            <th class="cw-contract" onclick="sortBy('contractShort')">CONTRACT <span id="arr-contractShort"></span></th>
+            <th class="cw-email">EMAIL</th>
+            <th class="cw-id">USER ID</th>
+          </tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="tbl-footer">
+        <div class="sum-cell"><div class="sum-label">TOTAL USERS</div><div class="sum-val" id="sum-total">—</div></div>
+        <div class="sum-cell"><div class="sum-label">ACTIVE</div><div class="sum-val grn" id="sum-active">—</div></div>
+        <div class="sum-cell"><div class="sum-label">TOTAL PAID IN</div><div class="sum-val grn" id="sum-paid">—</div></div>
+        <div class="sum-cell"><div class="sum-label">AVG WIN RATE</div><div class="sum-val" id="sum-wr">—</div></div>
+        <div class="sum-cell"><div class="sum-label">TOTAL UNITS UP</div><div class="sum-val grn" id="sum-units">—</div></div>
+        <div class="sum-cell"><div class="sum-label">MRR (EST.)</div><div class="sum-val grn" id="sum-mrr">—</div></div>
+      </div>
+    </div>
+
+    <!-- USER DETAIL VIEW -->
+    <div id="view-user" style="display:none;flex:1;overflow-y:auto;">
+      <div class="detail-topbar">
+        <div>
+          <div class="crumb" onclick="switchView('all')">← ALL USERS</div>
+          <div class="detail-name" id="d-name">—</div>
+        </div>
+        <div class="badges">
+          <div class="dbadge" id="d-sub-badge">—</div>
+          <div class="dbadge neutral" id="d-sport-badge">—</div>
+          <div class="dbadge neutral" id="d-plan-badge">—</div>
+        </div>
+      </div>
+
+      <div class="metrics-strip">
+        <div class="mc"><div class="mc-label">UNITS UP</div><div class="mc-val grn" id="m-units">—</div><div class="mc-sub" id="m-units-sub">—</div></div>
+        <div class="mc"><div class="mc-label">UNITS LOGGED</div><div class="mc-val" id="m-logged">—</div><div class="mc-sub" id="m-logged-sub">—</div></div>
+        <div class="mc"><div class="mc-label">WIN RATE</div><div class="mc-val" id="m-winrate">—</div><div class="mc-sub" id="m-wr-sub">—</div></div>
+        <div class="mc"><div class="mc-label">TOTAL PAID</div><div class="mc-val grn" id="m-paid">—</div><div class="mc-sub" id="m-paid-sub">—</div></div>
+        <div class="mc"><div class="mc-label">PICKS TAKEN</div><div class="mc-val" id="m-picks">—</div><div class="mc-sub">Total picks logged</div></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-hdr">// ACCOUNT DETAILS</div>
+          <div class="ir"><div class="ik">Email</div><div class="iv gray" id="d-email">—</div></div>
+          <div class="ir"><div class="ik">User ID</div><div class="iv gray" id="d-id">—</div></div>
+          <div class="ir"><div class="ik">Signed Up</div><div class="iv" id="d-signup">—</div></div>
+          <div class="ir"><div class="ik">Last Sign On</div><div class="iv grn" id="d-lastsign">—</div></div>
+          <div class="ir"><div class="ik">Contract</div><div class="iv" id="d-contract">—</div></div>
+          <div class="ir"><div class="ik">Fav Sport</div><div class="iv" id="d-sport">—</div></div>
+          <div class="ir"><div class="ik">Sportsbooks</div><div class="iv gray" id="d-books">—</div></div>
+          <div class="ir"><div class="ik">Avg Unit Size</div><div class="iv grn" id="d-unitsize">—</div></div>
+          <div class="ir"><div class="ik">Best Streak</div><div class="iv" id="d-streak">—</div></div>
+        </div>
+        <div class="panel">
+          <div class="panel-hdr">// SUBSCRIPTION TIMELINE</div>
+          <div class="tl-wrap">
+            <div class="tl-labels"><span id="tl-start">—</span><span id="tl-end">—</span></div>
+            <div class="tl-bar"><div class="tl-fill" id="tl-fill" style="width:0%;"></div></div>
+            <div class="tl-meta"><span id="tl-days">—</span><span id="tl-renew">—</span></div>
+            <div class="tl-events" id="tl-events"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAYMENT RECORDS -->
+      <div class="pay-section">
+        <div class="pay-hdr">
+          <div class="pay-hdr-txt">// PAYMENT RECORDS</div>
+          <div class="pay-hdr-total" id="pay-total-disp">—</div>
+        </div>
+        <table class="pay-table">
+          <thead><tr>
+            <th style="width:36px;">#</th>
+            <th style="width:120px;">DATE</th>
+            <th style="width:100px;">AMOUNT</th>
+            <th style="width:220px;">DESCRIPTION</th>
+            <th style="width:80px;">STATUS</th>
+            <th style="width:180px;">METHOD</th>
+            <th>TRANSACTION ID</th>
+          </tr></thead>
+          <tbody id="pay-tbody"></tbody>
+        </table>
+      </div>
+
+      <div class="three-col">
+        <div class="sms"><div class="sms-label">PICKS TAKEN</div><div class="sms-val" id="s-picks">—</div></div>
+        <div class="sms"><div class="sms-label">AVG UNIT SIZE</div><div class="sms-val grn" id="s-unitsize">—</div></div>
+        <div class="sms"><div class="sms-label">BEST STREAK</div><div class="sms-val" id="s-streak">—</div></div>
+      </div>
+
+      <div class="notes-section">
+        <div class="panel-hdr">// ADMIN NOTES</div>
+        <div class="notes-body" id="d-notes">—</div>
+      </div>
+    </div>
+
+    <!-- CREATE USER VIEW -->
+    <div id="view-create" style="display:none;flex:1;overflow-y:auto;">
+      <div class="create-wrap">
+        <div class="create-eyebrow">// ADMIN ACTION</div>
+        <div class="create-heading">Create User Account</div>
+
+        <div class="create-section-title">USER DETAILS</div>
+        <div class="form-grid">
+          <div class="fg">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" id="new-name" type="text" placeholder="Jordan Lee">
+          </div>
+          <div class="fg">
+            <label class="form-label">Email Address</label>
+            <input class="form-input" id="new-email" type="email" placeholder="user@email.com">
+          </div>
+        </div>
+
+        <div class="create-section-title">SUBSCRIPTION</div>
+        <div class="form-grid">
+          <div class="fg">
+            <label class="form-label">Plan</label>
+            <select class="form-select" id="new-plan">
+              <option value="monthly">MONTHLY — $97/mo</option>
+              <option value="quarterly">QUARTERLY — $247/qtr</option>
+              <option value="annual">ANNUAL — $797/yr</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label class="form-label">Contract Status</label>
+            <select class="form-select" id="new-contract">
+              <option value="pending">PENDING — send for signature</option>
+              <option value="signed">SIGNED — already executed</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="create-btn" onclick="createUser()">SEND ACCESS EMAIL →</button>
+        <div class="create-hint">An account will be created and a magic-link login email sent to the address above.<br>The user will be prompted to complete their profile on first login.</div>
+        <div class="toast-bar" id="toast">// ACCESS EMAIL SENT &nbsp;·&nbsp; USER ADDED TO DATABASE</div>
+      </div>
+    </div>
+
+    <!-- AMBASSADOR VIEW -->
+    <div id="view-ambassador" style="display:none;flex:1;overflow-y:auto;flex-direction:column;position:relative;">
+
+      <!-- AMBASSADOR LIST -->
+      <div id="amb-list-view" style="display:flex;flex-direction:column;flex:1;">
+        <div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0;">
+          <div>
+            <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);">// AMBASSADOR PROGRAM</div>
+            <div style="font-size:14px;font-weight:700;color:#fff;margin-top:2px;">Ambassador Roster</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="filter-btn active" onclick="setAmbFilter('all',this)" id="ambf-all">ALL</button>
+            <button class="filter-btn" onclick="setAmbFilter('active',this)" id="ambf-active">ACTIVE</button>
+            <button class="filter-btn" onclick="setAmbFilter('inactive',this)" id="ambf-inactive">INACTIVE</button>
+            <button onclick="openAddAmb()" style="font-family:var(--mono);font-size:9px;letter-spacing:1.5px;text-transform:uppercase;padding:5px 14px;background:var(--green);color:#000;border:none;cursor:pointer;font-weight:700;margin-left:8px;">+ ADD AMBASSADOR</button>
+          </div>
+        </div>
+
+        <div style="overflow:auto;flex:1;">
+          <table class="dt" style="table-layout:fixed;width:100%;">
+            <thead><tr>
+              <th style="width:150px;">NAME</th>
+              <th style="width:80px;">STATUS</th>
+              <th style="width:120px;">CODE</th>
+              <th style="width:105px;">BROUGHT ON</th>
+              <th style="width:90px;">THEIR CUT</th>
+              <th style="width:100px;">USER DISCOUNT</th>
+              <th style="width:80px;">REFERRALS</th>
+              <th style="width:110px;">INITIAL REV</th>
+              <th style="width:110px;">RECURRING REV</th>
+              <th style="width:110px;">TOTAL REV</th>
+              <th style="width:120px;">CASHOUT OWED</th>
+              <th style="width:180px;">EMAIL</th>
+            </tr></thead>
+            <tbody id="amb-table-body"></tbody>
+          </table>
+        </div>
+
+        <!-- summary footer -->
+        <div style="padding:10px 20px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(5,1fr);background:var(--surface);flex-shrink:0;" id="amb-summary">
+        </div>
+      </div>
+
+      <!-- AMBASSADOR DETAIL -->
+      <div id="amb-detail-view" style="display:none;flex-direction:column;flex:1;overflow-y:auto;">
+        <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface);position:sticky;top:0;z-index:10;">
+          <div>
+            <div style="font-size:8px;letter-spacing:1.5px;color:var(--g600);text-transform:uppercase;cursor:pointer;" onclick="closeAmbDetail()">← AMBASSADOR ROSTER</div>
+            <div style="font-size:15px;font-weight:700;color:#fff;margin-top:2px;" id="amd-name">—</div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div id="amd-status-badge" style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid;">—</div>
+            <div id="amd-code-badge" style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;padding:4px 10px;border:1px solid var(--border2);color:var(--g400);">—</div>
+          </div>
+        </div>
+
+        <!-- metrics strip -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--border);flex-shrink:0;">
+          <div class="mc"><div class="mc-label">TOTAL REVENUE</div><div class="mc-val grn" id="amd-total-rev">—</div><div class="mc-sub">All referred sales</div></div>
+          <div class="mc"><div class="mc-label">INITIAL REV</div><div class="mc-val" id="amd-init-rev">—</div><div class="mc-sub">First payments</div></div>
+          <div class="mc"><div class="mc-label">RECURRING REV</div><div class="mc-val" id="amd-rec-rev">—</div><div class="mc-sub">Renewals</div></div>
+          <div class="mc"><div class="mc-label">CASHOUT OWED</div><div class="mc-val grn" id="amd-owed">—</div><div class="mc-sub" id="amd-owed-sub">—</div></div>
+          <div class="mc"><div class="mc-label">TOTAL REFERRALS</div><div class="mc-val" id="amd-ref-count">—</div><div class="mc-sub">Users brought in</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--border);">
+          <!-- account details -->
+          <div style="border-right:1px solid var(--border);">
+            <div class="panel-hdr">// AMBASSADOR DETAILS</div>
+            <div class="ir"><div class="ik">Email</div><div class="iv gray" id="amd-email">—</div></div>
+            <div class="ir"><div class="ik">Discount Code</div><div class="iv grn" id="amd-code">—</div></div>
+            <div class="ir"><div class="ik">Brought On</div><div class="iv" id="amd-brought">—</div></div>
+            <div class="ir"><div class="ik">Status</div><div class="iv" id="amd-status-txt">—</div></div>
+            <div class="ir"><div class="ik">Their Commission</div><div class="iv grn" id="amd-their-cut">—</div></div>
+            <div class="ir"><div class="ik">User Discount</div><div class="iv" id="amd-user-disc">—</div></div>
+            <div class="ir"><div class="ik">Total Paid Out</div><div class="iv gray" id="amd-paid-out">—</div></div>
+          </div>
+          <!-- commission breakdown -->
+          <div>
+            <div class="panel-hdr">// REVENUE BREAKDOWN</div>
+            <div style="padding:16px 18px;">
+              <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--g600);margin-bottom:6px;"><span>INITIAL</span><span id="amd-init-pct">—</span></div>
+              <div style="width:100%;height:5px;background:var(--border2);margin-bottom:16px;"><div id="amd-init-bar" style="height:100%;background:#fff;transition:width 0.4s;width:0%;"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--g600);margin-bottom:6px;"><span>RECURRING</span><span id="amd-rec-pct">—</span></div>
+              <div style="width:100%;height:5px;background:var(--border2);margin-bottom:20px;"><div id="amd-rec-bar" style="height:100%;background:var(--green);transition:width 0.4s;width:0%;"></div></div>
+              <div style="border-top:1px solid var(--border);padding-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                <div>
+                  <div style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:4px;">COMMISSION EARNED</div>
+                  <div style="font-size:18px;font-weight:700;color:var(--green);" id="amd-commission-total">—</div>
+                </div>
+                <div>
+                  <div style="font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:4px;">ALREADY PAID OUT</div>
+                  <div style="font-size:18px;font-weight:700;color:var(--g400);" id="amd-already-paid">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- referred users table -->
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="padding:8px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);">// REFERRED USERS</div>
+            <div style="font-size:9px;color:var(--g600);" id="amd-ref-label">—</div>
+          </div>
+          <table class="pay-table" style="width:100%;">
+            <thead><tr>
+              <th style="width:36px;">#</th>
+              <th style="width:150px;">NAME</th>
+              <th style="width:110px;">JOINED</th>
+              <th style="width:110px;">PLAN</th>
+              <th style="width:110px;">INITIAL</th>
+              <th style="width:110px;">RECURRING</th>
+              <th style="width:100px;">STATUS</th>
+              <th>EMAIL</th>
+            </tr></thead>
+            <tbody id="amd-ref-tbody"></tbody>
+          </table>
+        </div>
+
+        <!-- payout history -->
+        <div style="border-bottom:1px solid var(--border);">
+          <div style="padding:8px 18px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g600);">// PAYOUT HISTORY</div>
+            <div style="font-size:9px;color:var(--green);font-weight:700;" id="amd-payout-total">—</div>
+          </div>
+          <table class="pay-table" style="width:100%;">
+            <thead><tr>
+              <th style="width:36px;">#</th>
+              <th style="width:130px;">DATE</th>
+              <th style="width:110px;">AMOUNT</th>
+              <th style="width:200px;">NOTE</th>
+              <th style="width:90px;">STATUS</th>
+              <th>METHOD</th>
+            </tr></thead>
+            <tbody id="amd-payout-tbody"></tbody>
+          </table>
+        </div>
+
+        <div style="border-bottom:1px solid var(--border);">
+          <div class="panel-hdr">// ADMIN NOTES</div>
+          <div style="padding:14px 18px;font-size:10px;color:var(--g400);line-height:1.8;" id="amd-notes">—</div>
+        </div>
+      </div>
+
+      <!-- ADD AMBASSADOR MODAL (inline) -->
+      <div id="amb-add-panel" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.85);z-index:200;align-items:center;justify-content:center;">
+        <div style="background:var(--surface);border:1px solid var(--border2);width:520px;max-height:90vh;overflow-y:auto;">
+          <div style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#fff;font-weight:700;">+ ADD AMBASSADOR</div>
+            <div style="cursor:pointer;color:var(--g600);font-size:16px;font-weight:700;" onclick="closeAddAmb()">✕</div>
+          </div>
+          <div style="padding:24px 20px;display:flex;flex-direction:column;gap:16px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="fg"><label class="form-label">Full Name</label><input class="form-input" id="anew-name" type="text" placeholder="e.g. Alex Rivera" style="width:100%;"></div>
+              <div class="fg"><label class="form-label">Email</label><input class="form-input" id="anew-email" type="email" placeholder="alex@email.com" style="width:100%;"></div>
+            </div>
+            <div class="fg"><label class="form-label">Discount Code (unique)</label><input class="form-input" id="anew-code" type="text" placeholder="e.g. ALEX20" style="width:100%;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div class="fg">
+                <label class="form-label">Their Commission %</label>
+                <input class="form-input" id="anew-their-cut" type="number" min="0" max="100" placeholder="e.g. 20" style="width:100%;">
+                <div style="font-size:8px;color:var(--g600);margin-top:4px;">% of revenue they receive</div>
+              </div>
+              <div class="fg">
+                <label class="form-label">User Discount %</label>
+                <input class="form-input" id="anew-user-disc" type="number" min="0" max="100" placeholder="e.g. 15" style="width:100%;">
+                <div style="font-size:8px;color:var(--g600);margin-top:4px;">% off for users who use their code</div>
+              </div>
+            </div>
+            <div class="fg"><label class="form-label">Admin Notes</label><input class="form-input" id="anew-notes" type="text" placeholder="Optional notes..." style="width:100%;"></div>
+            <div style="display:flex;gap:12px;align-items:center;padding-top:8px;border-top:1px solid var(--border);">
+              <button onclick="saveNewAmb()" class="create-btn" style="margin-top:0;">ADD AMBASSADOR →</button>
+              <div id="anew-toast" style="display:none;font-size:9px;color:var(--green);letter-spacing:1px;">// AMBASSADOR ADDED</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- EMPTY -->
+    <div id="view-empty">
+      <div class="empty-mark">E_</div>
+      <div class="empty-txt">// SELECT A USER TO VIEW RECORD</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const USERS=[
+  {id:'ET-00841',name:'Marcus Webb',email:'m.webb@gmail.com',
+   signup:'Jan 14, 2026',joinedTs:20260114,lastSign:'Today, 9:41 AM',lastSignTs:20260410,
+   contract:'SIGNED',contractShort:'SIGNED',sport:'NBA',books:'DraftKings · FanDuel',
+   plan:'ANNUAL — $797/yr',planShort:'ANNUAL',subEndTs:20270114,
+   unitsUp:'+142.3u',unitsNum:142.3,unitsUpSub:'All-time',
+   logged:'318u',loggedNum:318,loggedSub:'Across 247 picks',
+   winrate:'63%',winrateNum:63,winrateSub:'247W–145L',
+   paid:'$797',paidNum:797,paidSub:'1 payment · Jan 2026',
+   picks:'247',unitsize:'$100/u',streak:'9W',
+   tlStart:'Jan 14, 2026',tlEnd:'Jan 14, 2027',tlPct:22,tlDays:'84 days used',tlRenew:"Renews Jan 14 '27",
+   active:true,mrr:66,
+   payments:[
+     {date:'Jan 14, 2026',amount:'$797.00',desc:'Annual Plan — Full Payment',status:'paid',method:'Visa ···· 4821',txid:'ch_3Oa8xK2eZv'},
+   ],
+   notes:'Power user. Consistently logs all picks. Primarily NBA spread + O/U. Requested CSV export feature. No support tickets filed.'},
+  {id:'ET-00792',name:'Priya Nair',email:'priya.nair88@outlook.com',
+   signup:'Nov 3, 2025',joinedTs:20251103,lastSign:'Apr 9, 2026',lastSignTs:20260409,
+   contract:'SIGNED',contractShort:'SIGNED',sport:'MLB',books:'BetMGM · Caesars',
+   plan:'MONTHLY — $97/mo',planShort:'MONTHLY',subEndTs:20260503,
+   unitsUp:'+58.1u',unitsNum:58.1,unitsUpSub:'All-time',
+   logged:'91u',loggedNum:91,loggedSub:'Across 74 picks',
+   winrate:'58%',winrateNum:58,winrateSub:'43W–31L',
+   paid:'$582',paidNum:582,paidSub:'6 payments · $97/mo',
+   picks:'74',unitsize:'$50/u',streak:'5W',
+   tlStart:'Nov 3, 2025',tlEnd:'May 3, 2026',tlPct:72,tlDays:'159 days used',tlRenew:'Renews May 3, 2026',
+   active:true,mrr:97,
+   payments:[
+     {date:'Apr 3, 2026',amount:'$97.00',desc:'Monthly Plan — Apr 2026',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Rb1xM4eYq'},
+     {date:'Mar 3, 2026',amount:'$97.00',desc:'Monthly Plan — Mar 2026',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Qc2xL3eXp'},
+     {date:'Feb 3, 2026',amount:'$97.00',desc:'Monthly Plan — Feb 2026',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Pd3xK2eWo'},
+     {date:'Jan 3, 2026',amount:'$97.00',desc:'Monthly Plan — Jan 2026',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Oe4xJ1eVn'},
+     {date:'Dec 3, 2025',amount:'$97.00',desc:'Monthly Plan — Dec 2025',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Nf5xI0eUm'},
+     {date:'Nov 3, 2025',amount:'$97.00',desc:'Monthly Plan — Nov 2025 (initial)',status:'paid',method:'Mastercard ···· 3390',txid:'ch_3Mg6xH9eTl'},
+   ],
+   notes:'Consistent monthly renewal. Primarily MLB moneylines. Reached out in Feb re: NHL coverage expansion. Moderate pick logging cadence.'},
+  {id:'ET-00714',name:'Daniel Cho',email:'dcho.bets@gmail.com',
+   signup:'Aug 22, 2025',joinedTs:20250822,lastSign:'Mar 31, 2026',lastSignTs:20260331,
+   contract:'SIGNED',contractShort:'SIGNED',sport:'NFL',books:'FanDuel · PointsBet',
+   plan:'QUARTERLY — $247/qtr',planShort:'QUARTERLY',subEndTs:20260701,
+   unitsUp:'+201.7u',unitsNum:201.7,unitsUpSub:'All-time',
+   logged:'540u',loggedNum:540,loggedSub:'Across 421 picks',
+   winrate:'61%',winrateNum:61,winrateSub:'257W–164L',
+   paid:'$988',paidNum:988,paidSub:'4 payments · $247/qtr',
+   picks:'421',unitsize:'$200/u',streak:'12W',
+   tlStart:'Oct 1, 2025',tlEnd:'Jul 1, 2026',tlPct:80,tlDays:'193 days used',tlRenew:'Renews Jul 1, 2026',
+   active:true,mrr:82,
+   payments:[
+     {date:'Apr 1, 2026',amount:'$247.00',desc:'Quarterly Plan — Q2 2026',status:'paid',method:'Visa ···· 9902',txid:'ch_3Rc1xN5eZr'},
+     {date:'Jan 1, 2026',amount:'$247.00',desc:'Quarterly Plan — Q1 2026',status:'paid',method:'Visa ···· 9902',txid:'ch_3Qd2xM4eYs'},
+     {date:'Oct 1, 2025',amount:'$247.00',desc:'Quarterly Plan — Q4 2025',status:'paid',method:'Visa ···· 9902',txid:'ch_3Pe3xL3eXt'},
+     {date:'Aug 22, 2025',amount:'$247.00',desc:'Quarterly Plan — Initial',status:'paid',method:'Visa ···· 9902',txid:'ch_3Of4xK2eWu'},
+   ],
+   notes:'Highest unit volume user on platform. NFL spread specialist. Uses 2u sizing consistently. Has referred 2 users. Strong upsell candidate for annual plan.'},
+  {id:'ET-00603',name:'Sofia Reyes',email:'sreyes.pro@yahoo.com',
+   signup:'Jun 5, 2025',joinedTs:20250605,lastSign:'Jan 12, 2026',lastSignTs:20260112,
+   contract:'PENDING',contractShort:'PENDING',sport:'NHL',books:'DraftKings',
+   plan:'ANNUAL — $797/yr',planShort:'ANNUAL',subEndTs:20260605,
+   unitsUp:'+11.2u',unitsNum:11.2,unitsUpSub:'All-time',
+   logged:'22u',loggedNum:22,loggedSub:'Across 18 picks',
+   winrate:'56%',winrateNum:56,winrateSub:'10W–8L',
+   paid:'$797',paidNum:797,paidSub:'1 payment · Jun 2025',
+   picks:'18',unitsize:'$25/u',streak:'3W',
+   tlStart:'Jun 5, 2025',tlEnd:'Jun 5, 2026',tlPct:93,tlDays:'309 days used',tlRenew:'Renews Jun 5, 2026',
+   active:false,mrr:0,
+   payments:[
+     {date:'Jun 5, 2025',amount:'$797.00',desc:'Annual Plan — Full Payment',status:'paid',method:'Amex ···· 1004',txid:'ch_3Nh5xG7eRk'},
+   ],
+   notes:'Low engagement after onboarding. Contract not fully executed. Last login Jan 12. Re-engagement email sent Mar 15 — no response. Monitor for churn risk.'},
+  {id:'ET-00541',name:'Troy Hutchins',email:'troy.h@icloud.com',
+   signup:'Mar 2, 2026',joinedTs:20260302,lastSign:'Apr 8, 2026',lastSignTs:20260408,
+   contract:'SIGNED',contractShort:'SIGNED',sport:'NBA',books:'Caesars · BetRivers',
+   plan:'MONTHLY — $97/mo',planShort:'MONTHLY',subEndTs:20260502,
+   unitsUp:'+29.4u',unitsNum:29.4,unitsUpSub:'All-time',
+   logged:'62u',loggedNum:62,loggedSub:'Across 51 picks',
+   winrate:'60%',winrateNum:60,winrateSub:'31W–20L',
+   paid:'$194',paidNum:194,paidSub:'2 payments · $97/mo',
+   picks:'51',unitsize:'$75/u',streak:'6W',
+   tlStart:'Mar 2, 2026',tlEnd:'May 2, 2026',tlPct:54,tlDays:'39 days used',tlRenew:'Renews May 2, 2026',
+   active:true,mrr:97,
+   payments:[
+     {date:'Apr 2, 2026',amount:'$97.00',desc:'Monthly Plan — Apr 2026',status:'paid',method:'Visa ···· 6641',txid:'ch_3Rd1xO6eAs'},
+     {date:'Mar 2, 2026',amount:'$97.00',desc:'Monthly Plan — Mar 2026 (initial)',status:'paid',method:'Visa ···· 6641',txid:'ch_3Qe2xN5eBt'},
+   ],
+   notes:'New user. Strong early adoption. NBA-first. Engaged with Slack community. Good candidate for upsell to quarterly or annual plan.'},
+];
+
+let currentFilter='all',sortKey='name',sortAsc=true,selectedUser=null;
+
+function init(){renderTable();updateSummary();updateNav();}
+
+function updateNav(){
+  const a=USERS.filter(u=>u.active).length;
+  const m=USERS.reduce((s,u)=>s+u.mrr,0);
+  document.getElementById('nav-active').textContent=a;
+  document.getElementById('nav-mrr').textContent='$'+m.toLocaleString()+'/mo';
+}
+
+function renderSidebar(){renderTable();}
+
+function getFiltered(){
+  const q=document.getElementById('search-input').value.toLowerCase();
+  let data=[...USERS];
+  if(q) data=data.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q)||u.id.toLowerCase().includes(q));
+  if(currentFilter==='active') data=data.filter(u=>u.active);
+  if(currentFilter==='inactive') data=data.filter(u=>!u.active);
+  if(currentFilter==='pending') data=data.filter(u=>u.contractShort==='PENDING');
+  data.sort((a,b)=>{
+    let av=a[sortKey],bv=b[sortKey];
+    if(typeof av==='string'){av=av.toLowerCase();bv=bv.toLowerCase();}
+    return sortAsc?(av<bv?-1:av>bv?1:0):(av>bv?-1:av<bv?1:0);
+  });
+  return data;
+}
+
+function renderTable(){
+  const data=getFiltered();
+  const tbody=document.getElementById('table-body');
+  tbody.innerHTML='';
+  data.forEach(u=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="nm cw-name">${u.name}</td>
+      <td class="cw-status"><span class="pill ${u.active?'active':'inactive'}">${u.active?'ACTIVE':'INACTIVE'}</span></td>
+      <td class="cw-plan" style="color:var(--g400);">${u.planShort}</td>
+      <td class="cw-joined mt">${u.signup}</td>
+      <td class="cw-subend mt">${u.tlEnd}</td>
+      <td class="cw-last" style="color:${u.lastSignTs>=20260408?'var(--green)':'var(--g400)'}">${u.lastSign}</td>
+      <td class="cw-paid grn">${u.paid}</td>
+      <td class="cw-units ${u.unitsNum>0?'grn':'rd'}">${u.unitsUp}</td>
+      <td class="cw-logged" style="color:var(--g400);">${u.logged}</td>
+      <td class="cw-wr" style="color:${u.winrateNum>=60?'var(--green)':u.winrateNum>=55?'#fff':'var(--red)'}">${u.winrate}</td>
+      <td class="cw-sport mt">${u.sport}</td>
+      <td class="cw-contract"><span class="pill ${u.contractShort==='SIGNED'?'signed':'pending'}">${u.contractShort}</span></td>
+      <td class="cw-email mt">${u.email}</td>
+      <td class="cw-id mt">${u.id}</td>`;
+    tr.onclick=()=>selectUser(u);
+    tbody.appendChild(tr);
+  });
+}
+
+function updateSummary(){
+  const data=getFiltered();
+  const active=data.filter(u=>u.active).length;
+  const totalPaid=data.reduce((s,u)=>s+u.paidNum,0);
+  const avgWr=data.length?Math.round(data.reduce((s,u)=>s+u.winrateNum,0)/data.length):0;
+  const totalU=data.reduce((s,u)=>s+u.unitsNum,0).toFixed(1);
+  const mrr=data.reduce((s,u)=>s+u.mrr,0);
+  document.getElementById('sum-total').textContent=data.length;
+  document.getElementById('sum-active').textContent=active;
+  document.getElementById('sum-paid').textContent='$'+totalPaid.toLocaleString();
+  document.getElementById('sum-wr').textContent=avgWr+'%';
+  document.getElementById('sum-units').textContent='+'+totalU+'u';
+  document.getElementById('sum-mrr').textContent='$'+mrr.toLocaleString()+'/mo';
+}
+
+function setFilter(f,btn){
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('filter-lbl').textContent=f.toUpperCase();
+  renderTable();updateSummary();
+}
+
+function sortBy(key){
+  if(sortKey===key) sortAsc=!sortAsc; else{sortKey=key;sortAsc=true;}
+  document.querySelectorAll('[id^="arr-"]').forEach(el=>el.textContent='');
+  const a=document.getElementById('arr-'+key);
+  if(a) a.textContent=sortAsc?'▼':'▲';
+  renderTable();
+}
+
+function selectUser(u){
+  selectedUser=u;
+
+  document.getElementById('d-name').textContent=u.name;
+  const sb=document.getElementById('d-sub-badge');
+  sb.textContent=u.active?'ACTIVE':'INACTIVE';
+  sb.className='dbadge '+(u.active?'active':'inactive');
+  document.getElementById('d-sport-badge').textContent=u.sport;
+  document.getElementById('d-plan-badge').textContent=u.planShort;
+
+  document.getElementById('m-units').textContent=u.unitsUp;
+  document.getElementById('m-units-sub').textContent=u.unitsUpSub;
+  document.getElementById('m-logged').textContent=u.logged;
+  document.getElementById('m-logged-sub').textContent=u.loggedSub;
+  document.getElementById('m-winrate').textContent=u.winrate;
+  document.getElementById('m-wr-sub').textContent=u.winrateSub;
+  document.getElementById('m-paid').textContent=u.paid;
+  document.getElementById('m-paid-sub').textContent=u.paidSub;
+  document.getElementById('m-picks').textContent=u.picks;
+
+  document.getElementById('d-email').textContent=u.email;
+  document.getElementById('d-id').textContent=u.id;
+  document.getElementById('d-signup').textContent=u.signup;
+  document.getElementById('d-lastsign').textContent=u.lastSign;
+  const cc=document.getElementById('d-contract');
+  cc.textContent=u.contract;
+  cc.className='iv '+(u.contractShort==='SIGNED'?'grn':'rd');
+  document.getElementById('d-sport').textContent=u.sport;
+  document.getElementById('d-books').textContent=u.books;
+  document.getElementById('d-unitsize').textContent=u.unitsize;
+  document.getElementById('d-streak').textContent=u.streak;
+
+  document.getElementById('tl-start').textContent=u.tlStart;
+  document.getElementById('tl-end').textContent=u.tlEnd;
+  setTimeout(()=>{document.getElementById('tl-fill').style.width=u.tlPct+'%';},50);
+  document.getElementById('tl-days').textContent=u.tlDays;
+  document.getElementById('tl-renew').textContent=u.tlRenew;
+  const evts=[
+    {dot:'dot-green',txt:'Account created · access email sent',date:u.signup},
+    {dot:u.contractShort==='SIGNED'?'dot-green':'dot-red',txt:u.contractShort==='SIGNED'?'Contract signed · access granted':'Contract pending — awaiting signature',date:u.signup},
+    {dot:parseInt(u.picks)>0?'dot-green':'dot-gray',txt:parseInt(u.picks)>0?'First pick logged via dashboard':'No picks logged yet',date:''},
+    {dot:u.active?'dot-green':'dot-red',txt:u.active?'Subscription active':'Subscription inactive — monitor for churn',date:u.lastSign},
+  ];
+  const evtEl=document.getElementById('tl-events');
+  evtEl.innerHTML='';
+  evts.forEach(e=>{
+    const d=document.createElement('div');
+    d.className='tl-event';
+    d.innerHTML=`<div class="dot ${e.dot}" style="flex-shrink:0;margin-top:3px;"></div><div class="tl-evt-txt">${e.txt}</div><div class="tl-evt-date">${e.date}</div>`;
+    evtEl.appendChild(d);
+  });
+
+  const totalPaid=u.payments.reduce((s,p)=>s+parseFloat(p.amount.replace('$','')),0);
+  document.getElementById('pay-total-disp').textContent='TOTAL: $'+totalPaid.toFixed(2)+' · '+u.payments.length+' PAYMENT'+(u.payments.length!==1?'S':'');
+  const ptbody=document.getElementById('pay-tbody');
+  ptbody.innerHTML='';
+  u.payments.forEach((p,i)=>{
+    const tr=document.createElement('tr');
+    const sc=p.status==='paid'?'ps-paid':p.status==='pending'?'ps-pending':'ps-failed';
+    tr.innerHTML=`
+      <td style="color:var(--g600);font-size:9px;">${String(i+1).padStart(2,'0')}</td>
+      <td style="color:var(--g400);">${p.date}</td>
+      <td><span class="pay-amt">${p.amount}</span></td>
+      <td style="color:var(--g400);">${p.desc}</td>
+      <td><span class="${sc}">${p.status.toUpperCase()}</span></td>
+      <td style="color:var(--g600);font-size:9px;">${p.method}</td>
+      <td style="color:var(--g800);font-size:9px;">${p.txid}</td>`;
+    ptbody.appendChild(tr);
+  });
+
+  document.getElementById('s-picks').textContent=u.picks;
+  document.getElementById('s-unitsize').textContent=u.unitsize;
+  document.getElementById('s-streak').textContent=u.streak;
+  document.getElementById('d-notes').textContent=u.notes;
+
+  switchView('user');
+}
+
+function switchView(view){
+  document.getElementById('view-all').style.display='none';
+  document.getElementById('view-all').style.display='none';
+  document.getElementById('view-user').style.display='none';
+  document.getElementById('view-create').style.display='none';
+  document.getElementById('view-ambassador').style.display='none';
+  document.getElementById('view-empty').classList.remove('show');
+  ['tab-all','tab-create','tab-ambassador'].forEach(id=>document.getElementById(id).classList.remove('active'));
+
+  if(view==='all'){
+    document.getElementById('view-all').style.display='flex';
+    document.getElementById('tab-all').classList.add('active');
+  } else if(view==='user'&&selectedUser){
+    document.getElementById('view-user').style.display='flex';
+  } else if(view==='create'){
+    document.getElementById('view-create').style.display='flex';
+    document.getElementById('tab-create').classList.add('active');
+  } else if(view==='ambassador'){
+    const av=document.getElementById('view-ambassador');
+    av.style.display='flex';
+    av.style.flexDirection='column';
+    document.getElementById('tab-ambassador').classList.add('active');
+  } else {
+    document.getElementById('view-empty').classList.add('show');
+  }
+}
+
+function createUser(){
+  const name=document.getElementById('new-name').value.trim();
+  const email=document.getElementById('new-email').value.trim();
+  if(!name||!email){document.getElementById(name?'new-email':'new-name').focus();return;}
+  const plan=document.getElementById('new-plan').value;
+  const contract=document.getElementById('new-contract').value;
+  const planLabels={monthly:'MONTHLY — $97/mo',quarterly:'QUARTERLY — $247/qtr',annual:'ANNUAL — $797/yr'};
+  const planShorts={monthly:'MONTHLY',quarterly:'QUARTERLY',annual:'ANNUAL'};
+  const paidMap={monthly:'$97',quarterly:'$247',annual:'$797'};
+  const paidNums={monthly:97,quarterly:247,annual:797};
+  const mrrMap={monthly:97,quarterly:82,annual:66};
+  const newId='ET-00'+Math.floor(Math.random()*900+100);
+  const newUser={
+    id:newId,name,email,
+    signup:'Apr 10, 2026',joinedTs:20260410,lastSign:'—',lastSignTs:0,
+    contract:contract==='signed'?'SIGNED':'PENDING',contractShort:contract==='signed'?'SIGNED':'PENDING',
+    sport:'—',books:'—',
+    plan:planLabels[plan],planShort:planShorts[plan],subEndTs:0,
+    unitsUp:'+0.0u',unitsNum:0,unitsUpSub:'All-time',
+    logged:'0u',loggedNum:0,loggedSub:'No picks logged',
+    winrate:'—',winrateNum:0,winrateSub:'0W–0L',
+    paid:paidMap[plan],paidNum:paidNums[plan],paidSub:'1 payment · Apr 2026',
+    picks:'0',unitsize:'—',streak:'—',
+    tlStart:'Apr 10, 2026',tlEnd:'—',tlPct:0,tlDays:'0 days used',tlRenew:'—',
+    active:true,mrr:mrrMap[plan],
+    payments:[{date:'Apr 10, 2026',amount:paidMap[plan]+'.00',desc:planShorts[plan]+' Plan — Initial Payment',status:'paid',method:'—',txid:'pending_'+newId}],
+    notes:'Account created by admin on Apr 10, 2026. Login email sent. Awaiting onboarding.'
+  };
+  USERS.unshift(newUser);
+  renderTable();updateSummary();updateNav();
+  selectUser(newUser);
+  document.getElementById('new-name').value='';
+  document.getElementById('new-email').value='';
+  const t=document.getElementById('toast');
+  t.style.display='block';
+  setTimeout(()=>t.style.display='none',4000);
+}
+
+
+// ── AMBASSADOR DATA ──
+const AMBASSADORS=[
+  {id:'AMB-001',name:'Jordan Klass',email:'jordan.k@gmail.com',
+   code:'JORDAN20',broughtOn:'Feb 1, 2026',broughtTs:20260201,active:true,
+   theirCut:20,userDisc:15,
+   totalRevenue:2328,initialRev:1591,recurringRev:737,
+   commissionEarned:465.60,paidOut:200,
+   referrals:[
+     {name:'Marcus Webb',email:'m.webb@gmail.com',joined:'Feb 3, 2026',plan:'ANNUAL',initial:797,recurring:0,active:true},
+     {name:'Lisa Park',email:'l.park@icloud.com',joined:'Feb 14, 2026',plan:'MONTHLY',initial:97,recurring:291,active:true},
+     {name:'Cam Morris',email:'cam.m@outlook.com',joined:'Mar 1, 2026',plan:'QUARTERLY',initial:247,recurring:247,active:true},
+     {name:'Derek Shaw',email:'d.shaw@gmail.com',joined:'Mar 19, 2026',plan:'MONTHLY',initial:97,recurring:97,active:false},
+     {name:'Nia Torres',email:'nia.t@yahoo.com',joined:'Apr 2, 2026',plan:'MONTHLY',initial:97,recurring:0,active:true},
+   ],
+   payouts:[
+     {date:'Mar 1, 2026',amount:'$200.00',note:'Q1 commission payout',status:'paid',method:'PayPal'},
+   ],
+   notes:'Top performer. Consistently promotes on Twitter and Discord. Negotiated 20% cut upfront. Review for bonus at 10 referrals.'},
+  {id:'AMB-002',name:'Brianna Osei',email:'b.osei@hotmail.com',
+   code:'BREE10',broughtOn:'Jan 20, 2026',broughtTs:20260120,active:true,
+   theirCut:15,userDisc:10,
+   totalRevenue:1085,initialRev:797,recurringRev:288,
+   commissionEarned:162.75,paidOut:162.75,
+   referrals:[
+     {name:'Troy Hutchins',email:'troy.h@icloud.com',joined:'Jan 22, 2026',plan:'ANNUAL',initial:797,recurring:0,active:true},
+     {name:'Sam Okello',email:'sam.o@gmail.com',joined:'Feb 28, 2026',plan:'MONTHLY',initial:97,recurring:194,active:true},
+   ],
+   payouts:[
+     {date:'Feb 15, 2026',amount:'$162.75',note:'Full commission to date',status:'paid',method:'Bank transfer'},
+   ],
+   notes:'Solid mid-tier ambassador. Primarily LinkedIn audience. Paid out in full. Potential to upsell to higher commission tier.'},
+  {id:'AMB-003',name:'Kyle Mendez',email:'kyle.mendez@gmail.com',
+   code:'KYLE25',broughtOn:'Mar 5, 2026',broughtTs:20260305,active:true,
+   theirCut:25,userDisc:20,
+   totalRevenue:541,initialRev:541,recurringRev:0,
+   commissionEarned:135.25,paidOut:0,
+   referrals:[
+     {name:'Priya Nair',email:'priya.nair88@outlook.com',joined:'Mar 7, 2026',plan:'QUARTERLY',initial:247,recurring:0,active:true},
+     {name:'Will Chen',email:'w.chen@gmail.com',joined:'Mar 20, 2026',plan:'MONTHLY',initial:97,recurring:0,active:true},
+     {name:'Fiona Adams',email:'fi.adams@icloud.com',joined:'Apr 5, 2026',plan:'MONTHLY',initial:97,recurring:0,active:true},
+   ],
+   payouts:[],
+   notes:'New ambassador with high commission rate (25%) negotiated in exchange for large audience reach. No payouts yet — first payout due May 1.'},
+  {id:'AMB-004',name:'Tasha Laurent',email:'tasha.l@outlook.com',
+   code:'TASHA15',broughtOn:'Nov 10, 2025',broughtTs:20251110,active:false,
+   theirCut:15,userDisc:10,
+   totalRevenue:194,initialRev:194,recurringRev:0,
+   commissionEarned:29.10,paidOut:29.10,
+   referrals:[
+     {name:'Sofia Reyes',email:'sreyes.pro@yahoo.com',joined:'Nov 12, 2025',plan:'MONTHLY',initial:97,recurring:97,active:false},
+   ],
+   payouts:[
+     {date:'Dec 1, 2025',amount:'$29.10',note:'Nov commission',status:'paid',method:'PayPal'},
+   ],
+   notes:'Inactive. Stopped promoting after Dec 2025. Only 1 referral. Marked inactive Jan 2026.'},
+];
+
+let selectedAmb=null,ambFilter='all';
+
+function renderAmbTable(){
+  let data=[...AMBASSADORS];
+  if(ambFilter==='active') data=data.filter(a=>a.active);
+  if(ambFilter==='inactive') data=data.filter(a=>!a.active);
+  const tbody=document.getElementById('amb-table-body');
+  tbody.innerHTML='';
+  data.forEach(a=>{
+    const owed=(a.commissionEarned-a.paidOut).toFixed(2);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td class="nm" style="width:150px;">${a.name}</td>
+      <td style="width:80px;"><span class="pill ${a.active?'active':'inactive'}">${a.active?'ACTIVE':'INACTIVE'}</span></td>
+      <td style="width:120px;color:var(--green);font-weight:700;">${a.code}</td>
+      <td style="width:105px;color:var(--g600);">${a.broughtOn}</td>
+      <td style="width:90px;color:var(--green);font-weight:700;">${a.theirCut}%</td>
+      <td style="width:100px;color:var(--g400);">${a.userDisc}% off</td>
+      <td style="width:80px;color:#fff;font-weight:700;">${a.referrals.length}</td>
+      <td style="width:110px;color:#fff;font-weight:700;">$${a.initialRev.toLocaleString()}</td>
+      <td style="width:110px;color:var(--green);font-weight:700;">$${a.recurringRev.toLocaleString()}</td>
+      <td style="width:110px;color:var(--green);font-weight:700;">$${a.totalRevenue.toLocaleString()}</td>
+      <td style="width:120px;color:${parseFloat(owed)>0?'var(--green)':'var(--g600)'};font-weight:700;">$${owed}</td>
+      <td style="color:var(--g600);font-size:9px;">${a.email}</td>`;
+    tr.onclick=()=>openAmbDetail(a);
+    tbody.appendChild(tr);
+  });
+  // summary
+  const totalRev=data.reduce((s,a)=>s+a.totalRevenue,0);
+  const totalOwed=data.reduce((s,a)=>s+(a.commissionEarned-a.paidOut),0);
+  const totalRefs=data.reduce((s,a)=>s+a.referrals.length,0);
+  const active=data.filter(a=>a.active).length;
+  document.getElementById('amb-summary').innerHTML=`
+    <div class="sum-cell"><div class="sum-label">AMBASSADORS</div><div class="sum-val">${data.length}</div></div>
+    <div class="sum-cell"><div class="sum-label">ACTIVE</div><div class="sum-val grn">${active}</div></div>
+    <div class="sum-cell"><div class="sum-label">TOTAL REFERRALS</div><div class="sum-val">${totalRefs}</div></div>
+    <div class="sum-cell"><div class="sum-label">TOTAL REV DRIVEN</div><div class="sum-val grn">$${totalRev.toLocaleString()}</div></div>
+    <div class="sum-cell"><div class="sum-label">CASHOUT OWED</div><div class="sum-val grn">$${totalOwed.toFixed(2)}</div></div>`;
+}
+
+function setAmbFilter(f,btn){
+  ambFilter=f;
+  document.querySelectorAll('#view-ambassador .filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAmbTable();
+}
+
+function openAmbDetail(a){
+  selectedAmb=a;
+  document.getElementById('amb-list-view').style.display='none';
+  const dv=document.getElementById('amb-detail-view');
+  dv.style.display='flex';
+
+  document.getElementById('amd-name').textContent=a.name;
+  const sb=document.getElementById('amd-status-badge');
+  sb.textContent=a.active?'ACTIVE':'INACTIVE';
+  sb.style.color=a.active?'var(--green)':'var(--red)';
+  sb.style.borderColor=a.active?'rgba(0,255,136,0.3)':'rgba(255,51,68,0.3)';
+  document.getElementById('amd-code-badge').textContent=a.code;
+
+  document.getElementById('amd-total-rev').textContent='$'+a.totalRevenue.toLocaleString();
+  document.getElementById('amd-init-rev').textContent='$'+a.initialRev.toLocaleString();
+  document.getElementById('amd-rec-rev').textContent='$'+a.recurringRev.toLocaleString();
+  const owed=(a.commissionEarned-a.paidOut).toFixed(2);
+  document.getElementById('amd-owed').textContent='$'+owed;
+  document.getElementById('amd-owed-sub').textContent=a.theirCut+'% of $'+a.totalRevenue.toLocaleString();
+  document.getElementById('amd-ref-count').textContent=a.referrals.length;
+
+  document.getElementById('amd-email').textContent=a.email;
+  document.getElementById('amd-code').textContent=a.code;
+  document.getElementById('amd-brought').textContent=a.broughtOn;
+  document.getElementById('amd-status-txt').textContent=a.active?'ACTIVE':'INACTIVE';
+  document.getElementById('amd-status-txt').className='iv '+(a.active?'grn':'rd');
+  document.getElementById('amd-their-cut').textContent=a.theirCut+'% of revenue';
+  document.getElementById('amd-user-disc').textContent=a.userDisc+'% off for referrals';
+  document.getElementById('amd-paid-out').textContent='$'+a.paidOut.toFixed(2)+' paid';
+
+  const initPct=a.totalRevenue>0?Math.round(a.initialRev/a.totalRevenue*100):0;
+  const recPct=a.totalRevenue>0?Math.round(a.recurringRev/a.totalRevenue*100):0;
+  document.getElementById('amd-init-pct').textContent='$'+a.initialRev.toLocaleString()+' ('+initPct+'%)';
+  document.getElementById('amd-rec-pct').textContent='$'+a.recurringRev.toLocaleString()+' ('+recPct+'%)';
+  setTimeout(()=>{
+    document.getElementById('amd-init-bar').style.width=initPct+'%';
+    document.getElementById('amd-rec-bar').style.width=recPct+'%';
+  },50);
+  document.getElementById('amd-commission-total').textContent='$'+a.commissionEarned.toFixed(2);
+  document.getElementById('amd-already-paid').textContent='$'+a.paidOut.toFixed(2);
+
+  document.getElementById('amd-ref-label').textContent=a.referrals.length+' USER'+(a.referrals.length!==1?'S':'');
+  const rtbody=document.getElementById('amd-ref-tbody');
+  rtbody.innerHTML='';
+  a.referrals.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--g600);font-size:9px;">${String(i+1).padStart(2,'0')}</td>
+      <td style="color:#fff;font-weight:700;">${r.name}</td>
+      <td style="color:var(--g600);">${r.joined}</td>
+      <td style="color:var(--g400);">${r.plan}</td>
+      <td style="color:#fff;font-weight:700;">$${r.initial}</td>
+      <td style="color:var(--green);font-weight:700;">$${r.recurring}</td>
+      <td><span class="pill ${r.active?'active':'inactive'}">${r.active?'ACTIVE':'INACTIVE'}</span></td>
+      <td style="color:var(--g600);font-size:9px;">${r.email}</td>`;
+    rtbody.appendChild(tr);
+  });
+
+  const ptbody=document.getElementById('amd-payout-tbody');
+  ptbody.innerHTML='';
+  if(a.payouts.length===0){
+    ptbody.innerHTML='<tr><td colspan="6" style="padding:16px 18px;color:var(--g600);font-size:9px;letter-spacing:1px;">// NO PAYOUTS YET</td></tr>';
+  } else {
+    a.payouts.forEach((p,i)=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td style="color:var(--g600);font-size:9px;">${String(i+1).padStart(2,'0')}</td>
+        <td style="color:var(--g400);">${p.date}</td>
+        <td><span class="pay-amt">${p.amount}</span></td>
+        <td style="color:var(--g400);">${p.note}</td>
+        <td><span class="${p.status==='paid'?'ps-paid':'ps-pending'}">${p.status.toUpperCase()}</span></td>
+        <td style="color:var(--g600);font-size:9px;">${p.method}</td>`;
+      ptbody.appendChild(tr);
+    });
+  }
+  const totalPaidOut=a.payouts.reduce((s,p)=>s+parseFloat(p.amount.replace('$','')),0);
+  document.getElementById('amd-payout-total').textContent='TOTAL PAID OUT: $'+totalPaidOut.toFixed(2);
+  document.getElementById('amd-notes').textContent=a.notes||'—';
+}
+
+function closeAmbDetail(){
+  document.getElementById('amb-detail-view').style.display='none';
+  document.getElementById('amb-list-view').style.display='flex';
+  selectedAmb=null;
+}
+
+function openAddAmb(){
+  document.getElementById('amb-add-panel').style.display='flex';
+}
+function closeAddAmb(){
+  document.getElementById('amb-add-panel').style.display='none';
+}
+
+function saveNewAmb(){
+  const name=document.getElementById('anew-name').value.trim();
+  const email=document.getElementById('anew-email').value.trim();
+  const code=document.getElementById('anew-code').value.trim().toUpperCase();
+  const theirCut=parseInt(document.getElementById('anew-their-cut').value)||0;
+  const userDisc=parseInt(document.getElementById('anew-user-disc').value)||0;
+  const notes=document.getElementById('anew-notes').value.trim();
+  if(!name||!email||!code){return;}
+  const newAmb={
+    id:'AMB-00'+Math.floor(Math.random()*900+100),
+    name,email,code,
+    broughtOn:'Apr 10, 2026',broughtTs:20260410,
+    active:true,theirCut,userDisc,
+    totalRevenue:0,initialRev:0,recurringRev:0,
+    commissionEarned:0,paidOut:0,
+    referrals:[],payouts:[],notes
+  };
+  AMBASSADORS.unshift(newAmb);
+  renderAmbTable();
+  document.getElementById('anew-name').value='';
+  document.getElementById('anew-email').value='';
+  document.getElementById('anew-code').value='';
+  document.getElementById('anew-their-cut').value='';
+  document.getElementById('anew-user-disc').value='';
+  document.getElementById('anew-notes').value='';
+  const t=document.getElementById('anew-toast');
+  t.style.display='block';
+  setTimeout(()=>{t.style.display='none';closeAddAmb();},1800);
+}
+
+init();renderAmbTable();
+</script>
+</body>
+</html>
